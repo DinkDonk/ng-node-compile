@@ -1,4 +1,4 @@
-﻿var jsdom = require("jsdom"),
+﻿var JSDOM = require("jsdom").JSDOM,
     path = require('path');
 
 var ENVIORMENT_NOT_READY = "Angular enviorment not yet ready";
@@ -58,20 +58,11 @@ function ngCompile(modules, angularPath, settings) {
 }
 ngCompile.prototype.env = new Promise(function (resolve, reject) {
     ngCompile.prototype.envReady = false;
-    jsdom.env({
-        html: '<p></p>',
-        done: function (errors, window) {
-            /* istanbul ignore if */
-            if (errors)
-                reject(errors)
-            else {
-                global.window = window;
-                global.document = window.document;
-                ngCompile.prototype.envReady = true;
-                resolve();
-            }
-        }
-    })
+    jsdom = new JSDOM('<p></p>');
+    global.window = jsdom.window;
+    global.document = jsdom.window.document;
+    ngCompile.prototype.envReady = true;
+    resolve();
 });
 ngCompile.prototype.$new = function () {
     if (!this.ready) throw new Error(ENVIORMENT_NOT_READY);
@@ -88,14 +79,16 @@ ngCompile.prototype.$compile = function (html) {
     return function (context) {
         _self.angular.extend($scope, context);
         var elem = _self.services.$compile(html)($scope);
-        elem = _self.angular.element('<div/>').append(elem);
+        var elemAppended = _self.angular.element('<div/>').append(elem);
         $scope.$apply();
-        var str = elem[0].innerHTML;
+        var str = elemAppended[0].innerHTML;
         $scope.$destroy();
-        elem = $scope = null;
+        elemAppended.remove();
+        elem.remove();
+        elem = elemAppended = $scope = null;
         return str;
     }
-}
 
+}
 
 module.exports = ngCompile;
